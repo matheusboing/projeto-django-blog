@@ -1,7 +1,14 @@
 from django.contrib.auth.models import User
+from django_summernote.models import AbstractAttachment
 from django.db import models
 from utils.rands import slugfy_new
 from utils.images import resize_image
+
+class PostAttachment(AbstractAttachment):
+    def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = self.file.name
+        super().save(*args, **kwargs)
 
 class Tag(models.Model):
     class Meta:
@@ -20,7 +27,20 @@ class Tag(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugfy_new(self.name, 4)
-        return super().save(*args, **kwargs)
+
+        current_file_name = str(self.name)
+        super_save = super().save(*args, **kwargs)
+        file_changed = False
+
+        if self.file:
+            file_changed = current_file_name != self.name
+        
+        print('file_changed')
+
+        if file_changed:
+            resize_image(self.file, 900)
+        
+        return super_save
 
     def __str__(self):
         return self.name
